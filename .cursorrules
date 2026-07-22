@@ -1,0 +1,89 @@
+# Shalih Shoes — Project Context (Modules 1–7)
+# Thrift sneaker/chappal e-commerce, Pakistan. Treat all facts below as ground truth. Do not invent business details.
+
+## Business
+- Pre-loved/thrift sneakers (Nike AF1, Jordan) + chappals (Adidas/Nike slides). Footwear only.
+- Audience: youth 16–30, major PK cities. Mobile-first (3G/4G).
+- Single inventory owner (NOT peer marketplace). Trust + condition transparency = #1 UX priority.
+- Payments P1: COD + Manual Bank Transfer only. P2: JazzCash/Easypaisa. No live gateway in MVP.
+- Must feel premium (GOAT/StockX/Nike), NOT Instagram reseller page.
+
+## Stack (LOCKED — do not change)
+- Frontend: Next.js App Router, React, TypeScript, Tailwind, shadcn/ui → Vercel
+- Backend: FastAPI (async), PostgreSQL, Redis → Koyeb, Neon
+- Admin: Custom FastAPI admin (not Django). Multi-page site (NOT SPA). SEO-critical.
+
+## Design System (Module 3 — no hardcoded colors)
+- Dark-first: bg `#0A0A0B`, surface `#141416`, elevated `#1C1C1F`, border `#2A2A2E`
+- Text: primary `#F5F5F4`, secondary `#A1A1A6`, tertiary `#6E6E73`
+- Accent (ONE color): `#D4FF3F` lime — CTAs, prices, active filters, hover only. NOT bg floods/body text.
+- Alt accent: `#FF4D2E`. Semantic: success `#34D399`, warning `#FBBF24`, danger `#F87171`
+- Condition grades: mint 9-10 `#34D399`, good 7-8 `#D4FF3F`, fair 5-6 `#FBBF24`
+- Fonts: Display = Archivo Black (or Clash Display), Body = Inter
+- Spacing: 8px scale. Radius: sm 4px, md 8px, lg 16px. Container max 1440px.
+- Cards: 1px border, no heavy shadows. Motion: 150–200ms ease-out. NO Material UI.
+
+## MVP Scope
+IN: Home, Shop/Catalog, PDP, Cart, Checkout, Order confirmation/tracking, Auth, Account, Search, About, Contact, Admin panel.
+OUT: Live gateways, wishlist, reviews/ratings, seller marketplace features.
+
+## Routes (22)
+Storefront: /, /shop, /shop/[category], /product/[slug], /cart, /checkout, /order-confirmation/[id], /account, /account/orders/[id], /auth/login, /auth/signup, /search, /about, /contact, 404
+Admin: /admin/login, /dashboard, /products, /products/[id]/edit, /orders, /orders/[id]
+
+## Key UX Rules
+- Condition badge ON product image (always visible, not hover-only). Real photos, not stock.
+- Product card: hover crossfade to 2nd angle (desktop). Thrift = 1 unit/size, no qty in cart.
+- PDP: sticky mobile Add-to-Cart bar. Checkout: calmer, payment as tappable cards (COD/Bank).
+- Filters in URL params (?brand=nike&size=42). Min tap target 44px. Build mobile-first.
+
+## Folder Structure
+/app/(storefront)/ — customer pages with Navbar+Footer layout
+/app/admin/ — separate auth guard + utility UI
+/components/{layout,product,filters,cart,account,shared,ui}
+/lib/{api,store,utils,types} — Zustand: cartStore, authStore; hooks: useCart, useAuth, useFilters
+/styles/globals.css — CSS variables from Module 3
+
+## State
+- Cart: Zustand + localStorage (guest); sync via POST /api/cart/sync on login
+- Auth: JWT in httpOnly cookie (NOT localStorage); middleware protects /account/*
+- Filters: URL search params = source of truth
+- Data: Server Components for product lists/PDP; client fetch for cart, account, checkout
+
+## Components (28 — build order: tokens → shared → product → layout → filters → cart → account)
+Layout: Navbar, Footer, MobileFilterDrawer
+Product: ProductCard, ConditionBadge, PriceTag, SizeSelector, ProductGallery, ProductGrid
+Filters: FilterSidebar, ActiveFilterChips, SortDropdown, SearchBar
+Cart: CartLineItem, CartSummary, PaymentMethodCard, CheckoutForm
+Account: OrderStatusStepper, OrderCard, AddressCard
+Shared: Button, Badge, Skeleton, Toast, Modal, TrustBadgeRow, EmptyState, Breadcrumbs
+
+## API Endpoints (FastAPI)
+Auth: POST signup/login/logout, GET /me
+Products: GET /products (brand,size,price_min,max,condition_min,category,sort,page), GET /{slug}, GET /search?q=
+Cart: GET /cart, POST /sync, POST/DELETE /items/{id}
+Orders: POST /orders, GET /orders, GET /orders/{id}
+Admin: CRUD /admin/products, PUT /admin/orders/{id}, GET /admin/dashboard/summary
+
+## Flows
+- Auth: login → httpOnly JWT → middleware guard → cart sync
+- Checkout: POST /orders → status pending → stock soft-lock (Redis 30-60min) → redirect /order-confirmation/[id]
+- Order status: pending → confirmed → shipped → delivered (cancel before shipped). Admin updates manually.
+- Bank transfer: show bank details + WhatsApp proof note. WhatsApp notify ops on new order.
+- OOS at checkout: inline message + auto-remove from cart. 401 → login with return URL.
+
+## Redis
+- Catalog cache (60-120s TTL), stock reservation locks, optional JWT blacklist on logout
+
+## Naming
+- Components: PascalCase (ProductCard.tsx). Hooks: useCart.ts. API: verb-first getProducts(). Types: Product, Order, User
+
+## Anti-Patterns (ZERO TOLERANCE)
+- Generic Bootstrap/Material/default shadcn light theme
+- Plain white cards, hardcoded colors, hover-only critical info
+- Live payment gateways, wishlist, reviews, peer seller features in MVP
+- JWT in localStorage, inventing screens/endpoints outside spec
+
+## Build Order
+1. globals.css + Tailwind tokens  2. shadcn/ui  3. Shared components  4. Product  5. Layout
+6. Pages (Home→Shop→PDP→Cart→Checkout)  7. FastAPI + DB + Redis  8. Admin
